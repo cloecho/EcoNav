@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <link rel="icon" type="image/x-icon" href="favicon.png">
+
+    <title style="color: rgba(36, 80, 30, 0.767);">EcoNav</title>
+    <style>
+        @font-face {
+            font-family: 'Sans Serif';
+            src: url('sans-serif.ttf') format('truetype');
+        }
+
+        body {
+            min-width: 800px;
+            min-height: 500px;
+            font-family: 'Sans Serif', sans-serif;
+        }
+
+        .flex-container {
+            display: flex;
+            flex-direction: row;
+            margin-left: 25px;
+        }
+
+        #title-container {
+            position: relative;
+            display: inline-block;
+            left: 25px;
+        }
+
+        #overlay-container {
+            position: relative;
+            display: inline-block;
+            width: 20%;
+            height: 448px;
+            border: 1px solid #000;
+        }
+
+        #overlay-content {
+            position: relative;
+            left: 25px;
+            top: 5px;
+            height: 100%;
+            width: 100%;
+        }
+
+        #overlay-buttoncontainer {
+            position: absolute;
+            top: 292px;
+            left: 25px;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            width: 20%;
+            height: 470px;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 255, 255, 0);
+            z-index: 1;
+        }
+
+        #overlay-buttoncontent {
+            position: relative;
+            left: 25px;
+            top: 5px;
+            height: 100%;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0);
+        }
+
+        .car-button {
+            margin-top: 5px;
+            width: 73px;
+            height: 30px;
+
+            background-color: rgba(0, 0, 0, 0);
+            cursor: pointer;
+            border: 1px solid #000;
+            background: transparent;
+            border: none;
+
+        }
+
+        .bus-button {
+            margin-top: -20px;
+            width: 73px;
+            height: 30px;
+
+            background-color: rgba(0, 0, 0, 0);
+            cursor: pointer;
+            background: transparent;
+            border: none;
+
+        }
+
+        .generate-button {
+            width: 200px;
+            height: 50px;
+            background: transparent;
+            align-content: center;
+            border: none;
+        }
+
+        img.generate-button {
+            width: 30px;
+            height: 30px;
+            background: transparent;
+        }
+
+        #map-container {
+            display: inline-block;
+            position: absolute;
+            top: 4%;
+            left: 23%;
+            width: 73%;
+            height: 91%;
+            border: 1px solid #000;
+        }
+
+        #map-content {
+            text-align: center;
+        }
+
+        .car-image {
+            max-width: 25px;
+            height: auto;
+            float: left;
+            margin-top: -2px;
+            margin-right: 5px;
+        }
+
+        .bus-image {
+            max-width: 25px;
+            height: auto;
+            float: left;
+            margin-top: -3px;
+            margin-right: 5px;
+        }
+
+        .metro-image {
+            max-width: 25px;
+            height: auto;
+            float: left;
+            margin-top: -3px;
+            margin-right: 5px;
+        }
+    </style>
+    <!-- Include Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.min.css" />
+
+    <!-- Include Leaflet JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.min.js"></script>
+    <!-- Include Google Maps Places API JavaScript -->
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXdI1g5CfTjBl20y0LgAwH29aVxFfOLJ4&callback=Function.prototype"></script>
+</head>
+
+<body>
+    <div id="title-container">
+        <div class="flex-container">
+            <img src="favicon.png" alt="logo"
+                style="width: 80px; height: 80px; margin-left: -30px; margin-top: -5px; margin-right: 10px;">
+            <img src="EcoNav.png" alt="EcoNav"
+                style="width: 200px; height: 40px; margin-top: 20px; margin-left: -5px; margin-right: 10px;">
+        </div>
+        <p><b>Initial Point: </b><input type="text" id="origin-input" placeholder="Search for a location"></p>
+        <p><b>Destination: </b><input type="text" id="destination-input" placeholder="Search for a location"></p>
+        <button id="generate-button" class="generate-button" style="margin-left: 35px; margin-top: 5px">
+            <img src="generate.png" alt="generate" style="width: 200px; margin-left: -8px; margin-top: -1px">
+        </button>
+        <p></p>
+    </div>
+    <div class="flex-container">
+        <div id="overlay-container">
+            <div id="overlay-content">
+                <h3>Travel Modes</h3>
+                <img id="car" src="car.png" alt="car" class="car-image">
+                <p id="car-text">Car</p>
+                <img id="bus" src="bus.png" alt="bus" class="bus-image">
+                <p id="bus-text">Bus</p>
+                <h3>Most Sustainable<br>Transportation</br></h3>
+                <p id="first-carbon">1.</p>
+                <p id="second-carbon">2.</p>
+            </div>
+        </div>
+        <div id="map-container">
+            <div id="map-content">
+                <div id="map" style="height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+    <div id="overlay-buttoncontainer">
+        <div id="overlay-buttoncontent">
+            <button id="car-button" class="car-button" onclick="onCarClick()"></button>
+            <p></p>
+            <button id="bus-button" class="bus-button" onclick="onBusClick()"></button>
+        </div>
+    </div>
+    <script>
+
+        // variables for bus and car carbon values
+        var busCarbon = 0;
+        var carCarbon = 0;
+
+        // Initialize the map
+        var map = L.map('map').setView([37.599734, -78.487087], 7);
+
+        // Add a tile layer to the map
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        function onCarClick() {
+            map = new google.maps.Map(document.getElementById('map-container'), {
+                center: { lat: 37.7749, lng: -122.4194 },
+            });
+
+            document.getElementById('bus-text').style.opacity = 0.5;
+
+            document.getElementById('bus').style.opacity = 0.5;
+
+            document.getElementById('car-text').style.opacity = 1;
+
+            document.getElementById('car').style.opacity = 1;
+
+            // Get the search input value
+            var start = document.getElementById('origin-input').value;
+            var end = document.getElementById('destination-input').value;
+            var directionsService = new google.maps.DirectionsService;
+
+            // Create a DirectionsRenderer object to display the route on the map
+            var directionsDisplay = new google.maps.DirectionsRenderer({ map: map });
+
+            // Request the route from the DirectionsService
+            directionsService.route({
+                origin: start,
+                destination: end,
+                // travelMode: driving, transit
+                travelMode: 'DRIVING'
+            }, function (response, status) {
+                if (status === 'OK') {
+                    // Display the route on the map
+                    directionsDisplay.setDirections(response);
+
+                } else {
+                    window.alert('Please type in valid locations (they have to be unique)');
+                }
+            });
+        }
+
+        function onBusClick() {
+
+            document.getElementById('car-text').style.opacity = 0.5;
+
+            document.getElementById('car').style.opacity = 0.5;
+
+            document.getElementById('bus-text').style.opacity = 1;
+
+            document.getElementById('bus').style.opacity = 1;
+
+            map = new google.maps.Map(document.getElementById('map-container'), {
+                center: { lat: 37.7749, lng: -122.4194 },
+            });
+            // Get the search input value
+            var start = document.getElementById('origin-input').value;
+            var end = document.getElementById('destination-input').value;
+            var directionsService = new google.maps.DirectionsService;
+
+            // Create a DirectionsRenderer object to display the route on the map
+            var directionsDisplay = new google.maps.DirectionsRenderer({ map: map });
+
+            // Request the route from the DirectionsService
+            directionsService.route({
+                origin: start,
+                destination: end,
+                // travelMode: driving, transit
+                travelMode: 'TRANSIT',
+                transitOptions: {
+                    modes: ['BUS', 'TRAIN'] // Specify the transit modes you want to include
+                }
+            }, function (response, status) {
+                if (status === 'OK') {
+                    // Display the route on the map
+                    directionsDisplay.setDirections(response);
+                } else {
+                    window.alert('Please type in valid locations (they have to be unique)');
+                }
+            });
+
+        }
+
+        function roundToNearestHundredth(number) {
+            return Math.round(number * 100) / 100;
+        }
+
+        function calculateCarbon() {
+
+            busCarbon = 0;
+            carCarbon = 0;
+
+            map = new google.maps.Map(document.getElementById('map-container'), {
+                center: { lat: 37.7749, lng: -122.4194 },
+            });
+            // Get the search input value
+            var start = document.getElementById('origin-input').value;
+            var end = document.getElementById('destination-input').value;
+            var directionsService = new google.maps.DirectionsService;
+            directionsService.route({
+                origin: start,
+                destination: end,
+                // travelMode: driving, transit
+                travelMode: 'DRIVING'
+            }, function (response, status) {
+                if (status === 'OK') {
+                    // Display the route on the map
+                    var route = response.routes[0];
+                    var distance = 0;
+                    for (var i = 0; i < route.legs.length; i++) {
+                        distance += route.legs[i].distance.value;
+                    }
+                    // Convert distance to kilometers
+                    var distanceMi = distance * 0.000621371;
+                    carCarbon = distanceMi * 371;
+
+                }
+            });
+            directionsService.route({
+                origin: start,
+                destination: end,
+                // travelMode: driving, transit
+                travelMode: 'TRANSIT',
+                transitOptions: {
+                    modes: ['BUS', 'TRAIN'] // Specify the transit modes you want to include
+                }
+            }, function (response, status) {
+                if (status === 'OK') {
+                    // Display the route on the map
+                    var route = response.routes[0];
+                    var distance = 0;
+                    for (var i = 0; i < route.legs.length; i++) {
+                        distance += route.legs[i].distance.value;
+                    }
+                    // Convert distance to kilometers
+                    var distanceMi = distance * 0.000621371;
+                    busCarbon = distanceMi * 299;
+
+                }
+            });
+
+            setTimeout(function () {
+                if (busCarbon != 0 && carCarbon != 0) {
+                    if (busCarbon < carCarbon) {
+                        document.getElementById("first-carbon").innerHTML = "1. Bus (" + Math.round(busCarbon) + " g CO2)";
+                        document.getElementById("second-carbon").innerHTML = "2. Car (" + Math.round(carCarbon) + " g CO2)";
+                    } else {
+                        document.getElementById("first-carbon").innerHTML = "1. Car (" + Math.round(carCarbon) + " g CO2)";
+                        document.getElementById("second-carbon").innerHTML = "2. Bus (" + Math.round(busCarbon) + " g CO2)";
+                    }
+                } else {
+                    if (busCarbon == 0) {
+                        document.getElementById("first-carbon").innerHTML = "1. Car (" + Math.round(carCarbon) + " g CO2)";
+                        document.getElementById("second-carbon").innerHTML = "2. Bus (No bus route available)";
+                    } else if (carCarbon == 0) {
+                        document.getElementById("first-carbon").innerHTML = "1. Bus (" + Math.round(busCarbon) + " g CO2)";
+                        document.getElementById("second-carbon").innerHTML = "2. Car (No car route available)";
+                    }
+                }
+            }, 1000);
+
+        }
+
+        // Add an event listener for the search button
+        document.getElementById('generate-button').addEventListener('click', function () {
+            calculateCarbon();
+            onCarClick();
+        });
+    </script>
+    <script>
+        function initMap() {
+            // Specify your latitude and longitude
+            var myLatLng = { lat: 38.822571, lng: -99.751740 };
+
+            // Create a map instance
+            var map = new google.maps.Map(document.getElementById('map-container'), {
+                center: myLatLng,
+                zoom: 4.5
+            });
+        }
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXdI1g5CfTjBl20y0LgAwH29aVxFfOLJ4&callback=initMap"></script>
+</body>
+
+</html>
